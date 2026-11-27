@@ -310,9 +310,11 @@ class Guard {
     Frames f;
     std::vector<Segment> self_seg;
     std::vector<Segment> body_seg;
-    // For each other body and each bounded body, the capsules that the current walk can bring below the floor.
-    std::vector<std::vector<std::vector<int>>> near;
   };
+
+  // For each other body and each bounded body, the capsules of the other body that one walk can bring below the
+  // floor. Empty: every capsule.
+  using Near = std::vector<std::vector<std::vector<int>>>;
 
   struct Value {
     double value = std::numeric_limits<double>::infinity();
@@ -402,9 +404,9 @@ class Guard {
   }
 
   // The value of check k at the pose in ctx. Without the gradient, an other-body check may stop at the first
-  // capsule below `below`, and skips the capsules that cannot come below it.
+  // capsule below `below`. An other-body check reads only the capsules in `near`.
   Value evaluate(const Context& ctx, int k, bool with_gradient,
-                 double below = std::numeric_limits<double>::infinity()) const {
+                 double below = std::numeric_limits<double>::infinity(), const Near& near = {}) const {
     const Location at = locate(ctx, k);
     Value v;
     if (with_gradient) v.gradient = Eigen::VectorXd::Zero(model_.chain.joint_count());
@@ -442,10 +444,10 @@ class Guard {
     const Eigen::Vector3d center = 0.5 * (seg.first + seg.second);
     const double bound = 0.5 * (seg.second - seg.first).norm() + body.capsule.radius;
     const std::vector<BaseCapsule>& capsules = ctx.others[at.index];
-    const std::vector<int>* near = ctx.near.empty() ? nullptr : &ctx.near[at.index][at.body];
-    const std::size_t count = near ? near->size() : capsules.size();
+    const std::vector<int>* kept = near.empty() ? nullptr : &near[at.index][at.body];
+    const std::size_t count = kept ? kept->size() : capsules.size();
     for (std::size_t n = 0; n < count; ++n) {
-      const BaseCapsule& c = capsules[near ? (*near)[n] : n];
+      const BaseCapsule& c = capsules[kept ? (*kept)[n] : n];
       if ((center - c.center).norm() - bound - c.bound >= std::min(v.value, below)) continue;
       const auto [p, o] = closest_points_of_segments(seg.first, seg.second, c.a, c.b);
       const double distance = (p - o).norm();
@@ -479,10 +481,10 @@ class Guard {
     return floors;
   }
 
-  bool clear(Context& ctx, const std::vector<double>& floors, const Eigen::VectorXd& q) const {
+  bool clear(Context& ctx, const std::vector<double>& floors, const Eigen::VectorXd& q, const Near& near) const {
     pose(ctx, q);
     for (int k = 0; k < check_count(ctx); ++k)
-      if (evaluate(ctx, k, false, floors[k]).value < floors[k]) return false;
+      if (evaluate(ctx, k, false, floors[k], near).value < floors[k]) return false;
     return true;
   }
 
@@ -510,18 +512,17 @@ class Guard {
     }
   }
 
-  // Keeps, for each bounded body, the other capsules that it can come below its floor to on a move of `moved`
-  // from `from`.
-  void keep_near(Context& ctx, const std::vector<double>& floors, const Eigen::VectorXd& from,
-                 const Eigen::VectorXd& moved) const {
-    ctx.near.clear();
-    if (ctx.others.empty()) return;
+  // For each bounded body, the other capsules that it can come below its floor to on a move of `moved` from `from`.
+  Near near_on_move(Context& ctx, const std::vector<double>& floors, const Eigen::VectorXd& from,
+                    const Eigen::VectorXd& moved) const {
+    Near near;
+    if (ctx.others.empty()) return near;
     pose(ctx, from);
     const int first = static_cast<int>(model_.self.pairs.size() + planes_.size() * plane_bodies_.size());
     const int per_other = static_cast<int>(model_.bodies.size());
-    ctx.near.resize(ctx.others.size());
+    near.resize(ctx.others.size());
     for (std::size_t k = 0; k < ctx.others.size(); ++k) {
-      ctx.near[k].resize(model_.bodies.size());
+      near[k].resize(model_.bodies.size());
       for (std::size_t i = 0; i < model_.bodies.size(); ++i) {
         const Segment& seg = ctx.body_seg[i];
         const Eigen::Vector3d center = 0.5 * (seg.first + seg.second);
@@ -530,9 +531,10 @@ class Guard {
         const double floor = floors[first + static_cast<int>(k) * per_other + static_cast<int>(i)];
         for (std::size_t c = 0; c < ctx.others[k].size(); ++c)
           if ((center - ctx.others[k][c].center).norm() - reach - ctx.others[k][c].bound < floor)
-            ctx.near[k][i].push_back(static_cast<int>(c));
+            near[k][i].push_back(static_cast<int>(c));
       }
     }
+    return near;
   }
 
   // The walk of positronic-franka#32: enough samples that a check falls at most path_tolerance below its floor
@@ -545,23 +547,21 @@ class Guard {
     if (!ctx.others.empty()) change_over_move = std::max(change_over_move, body_rate_.dot(moved));
     const int samples = std::max(params_.least_samples,
                                  static_cast<int>(std::ceil(change_over_move / (2 * params_.path_tolerance))));
-    keep_near(ctx, floors, from, moved);
+    const Near near = near_on_move(ctx, floors, from, moved);
     double safe = 0.0;
     for (int i = 1; i <= samples; ++i) {
       const double s = static_cast<double>(i) / samples;
-      if (clear(ctx, floors, from + s * (to - from))) {
+      if (clear(ctx, floors, from + s * (to - from), near)) {
         safe = s;
         continue;
       }
       double blocked = s;
       for (int b = 0; b < params_.bisections; ++b) {
         const double mid = 0.5 * (safe + blocked);
-        (clear(ctx, floors, from + mid * (to - from)) ? safe : blocked) = mid;
+        (clear(ctx, floors, from + mid * (to - from), near) ? safe : blocked) = mid;
       }
-      ctx.near.clear();
       return {safe, blocked, true};
     }
-    ctx.near.clear();
     return {};
   }
 
