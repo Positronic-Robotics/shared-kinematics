@@ -8,18 +8,6 @@ FR3 = sk.arm_table('fr3')
 GRIPPER = sk.gripper_table('robotiq_2f85')
 
 
-def wrist_camera(pairs_with: list[str] | None = None) -> sk.Attachment:
-    return sk.Attachment(
-        name='wrist_camera',
-        mount_type='zed_mini_bracket',
-        link='link8',
-        a=(0.06, 0, 0.02),
-        b=(0.06, 0, 0.06),
-        radius=0.02,
-        pairs_with=pairs_with,
-    )
-
-
 def test_the_fr3_model_holds_the_arm_and_gripper_capsules_and_the_32_self_pairs(fr3):
     names = [b.capsule.name for b in fr3.bodies]
     assert names[:8] == [f'link{k}' for k in range(8)]
@@ -52,6 +40,18 @@ def test_an_arm_table_with_no_pairs_checks_each_link_pair_two_or_more_joints_apa
     assert 'link0-link2' in pairs and 'link5-link7' in pairs
     assert 'link0-link1' not in pairs and 'link6-link7' not in pairs
     assert len(model.self_collision.capsules) == len(FR3.capsules)
+
+
+def wrist_camera(pairs_with: list[str] | None = None) -> sk.Attachment:
+    return sk.Attachment(
+        name='wrist_camera',
+        mount_type='zed_mini_bracket',
+        link='link8',
+        a=(0.06, 0, 0.02),
+        b=(0.06, 0, 0.06),
+        radius=0.02,
+        pairs_with=pairs_with,
+    )
 
 
 def test_a_wrist_camera_joins_the_box_and_the_self_pairs_with_links_two_or_more_joints_away():
