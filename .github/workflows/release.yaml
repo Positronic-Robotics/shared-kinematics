@@ -1,0 +1,77 @@
+name: Publish to PyPI
+
+on:
+  release:
+    types: [published]
+  workflow_dispatch: {}
+
+permissions:
+  contents: read
+
+jobs:
+  wheels:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, ubuntu-24.04-arm]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+
+      # One wheel per rig Python version. CMake fetches Eigen inside the manylinux container.
+      - name: Build the wheels
+        uses: pypa/cibuildwheel@v2.23
+        env:
+          CIBW_BUILD: "cp311-manylinux_* cp312-manylinux_* cp313-manylinux_*"
+          CIBW_TEST_REQUIRES: "pytest trimesh scipy"
+          CIBW_TEST_COMMAND: "pytest {project}/python"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: wheels-${{ matrix.os }}
+          path: wheelhouse/*.whl
+
+  sdist:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: astral-sh/setup-uv@v5
+
+      - name: Build the sdist
+        run: uvx --from build pyproject-build --sdist
+
+      - name: Twine check
+        run: uvx twine check dist/*
+
+      - name: Verify version matches tag
+        if: github.event_name == 'release'
+        run: |
+          TAG="${{ github.event.release.tag_name }}"
+          TAG="${TAG#v}"
+          FILE_VER=$(python -c "import tomllib;print(tomllib.load(open('pyproject.toml','rb'))['project']['version'])")
+          echo "Tag: $TAG | pyproject.toml: $FILE_VER"
+          if [ "$TAG" != "$FILE_VER" ]; then
+            echo "Error: tag ($TAG) does not match project.version ($FILE_VER)" >&2
+            exit 1
+          fi
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: sdist
+          path: dist/*.tar.gz
+
+  publish:
+    if: github.event_name == 'release'
+    needs: [wheels, sdist]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          path: dist
+          merge-multiple: true
+
+      - name: Publish to PyPI
+        uses: pypa/gh-action-pypi-publish@release/v1
+        with:
+          password: ${{ secrets.PYPI_API_TOKEN }}
