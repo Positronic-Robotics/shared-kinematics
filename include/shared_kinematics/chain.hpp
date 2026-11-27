@@ -1,6 +1,7 @@
 #pragma once
 
 #include <cmath>
+#include <limits>
 #include <stdexcept>
 #include <string>
 #include <utility>
@@ -18,6 +19,8 @@ struct Link {
   Eigen::Isometry3d origin = Eigen::Isometry3d::Identity();  // the link frame in the parent frame at zero joints
   int joint = -1;  // index of the revolute joint that turns this link; -1 for a fixed link
   Eigen::Vector3d axis = Eigen::Vector3d::UnitZ();  // unit, in the link frame
+  double lower = -std::numeric_limits<double>::infinity();  // the joint limits, rad
+  double upper = std::numeric_limits<double>::infinity();
 };
 
 // Base-frame transforms of all links, in link order.
@@ -36,6 +39,8 @@ class Chain {
     int joints = 0;
     for (const Link& link : links_) joints += link.joint >= 0 ? 1 : 0;
     joint_link_.assign(joints, -1);
+    lower_ = Eigen::VectorXd::Constant(joints, -std::numeric_limits<double>::infinity());
+    upper_ = Eigen::VectorXd::Constant(joints, std::numeric_limits<double>::infinity());
     moving_.resize(links_.size());
     for (std::size_t i = 0; i < links_.size(); ++i) {
       Link& link = links_[i];
@@ -48,7 +53,11 @@ class Chain {
         const double norm = link.axis.norm();
         if (!(norm > 1e-9)) throw std::invalid_argument("link " + link.name + " has no joint axis");
         link.axis /= norm;
+        if (std::isnan(link.lower) || std::isnan(link.upper) || !(link.lower <= link.upper))
+          throw std::invalid_argument("link " + link.name + " has no joint range");
         joint_link_[link.joint] = static_cast<int>(i);
+        lower_(link.joint) = link.lower;
+        upper_(link.joint) = link.upper;
       }
       if (i > 0) moving_[i] = moving_[link.parent];
       if (link.joint >= 0) moving_[i].push_back(link.joint);
@@ -56,6 +65,8 @@ class Chain {
   }
 
   int joint_count() const { return static_cast<int>(joint_link_.size()); }
+  const Eigen::VectorXd& lower_limits() const { return lower_; }
+  const Eigen::VectorXd& upper_limits() const { return upper_; }
   int link_count() const { return static_cast<int>(links_.size()); }
   const Link& link(int i) const { return links_.at(i); }
   const std::vector<Link>& links() const { return links_; }
@@ -147,6 +158,7 @@ class Chain {
   std::vector<Link> links_;
   std::vector<int> joint_link_;
   std::vector<std::vector<int>> moving_;
+  Eigen::VectorXd lower_, upper_;
 };
 
 }  // namespace shared_kinematics

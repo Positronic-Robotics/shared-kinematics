@@ -180,8 +180,9 @@ class Guard {
     for (std::size_t r = 0; r < binding.size(); ++r) g.row(r) = evaluate(ctx, binding[r], true).gradient.transpose();
     const Eigen::VectorXd rest = project_onto_cone(q_to - stop, g);
     if (rest.norm() < 1e-12) return result;
+    const Eigen::VectorXd end =
+        (stop + rest).cwiseMax(model_.chain.lower_limits()).cwiseMin(model_.chain.upper_limits());
     // The fast loop plays the straight move from q_from, so the walk checks that move to the slid target.
-    const Eigen::VectorXd end = stop + rest;
     const Walk second = walk(ctx, floors, q_from, end);
     const Eigen::VectorXd slid = second.stopped ? Eigen::VectorXd(q_from + second.safe * (end - q_from)) : end;
     if ((slid - q_to).norm() >= (stop - q_to).norm()) return result;
@@ -422,7 +423,7 @@ class Guard {
           const Capsule &ca = model_.self.capsules[i], &cb = model_.self.capsules[j];
           const auto [pa, pb] =
               closest_points_of_segments(ctx.self_seg[i].first, ctx.self_seg[i].second, ctx.self_seg[j].first,
-                                         ctx.self_seg[j].second, ParallelTest::kFranka32);
+                                         ctx.self_seg[j].second, pair.parallel);
           const double distance = (pa - pb).norm();
           const double clearance = distance - ca.radius - cb.radius;
           if (!(clearance < v.value)) continue;

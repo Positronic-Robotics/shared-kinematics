@@ -10,7 +10,7 @@ namespace shared_kinematics {
 // When two segment axes count as parallel.
 enum class ParallelTest {
   kAngle,       // the squared sine of the angle between the axes is below 1e-12
-  kFranka32,    // a * e - b * b <= 1e-12, as positronic-franka#32 tests it; the self pairs keep it
+  kFranka32,    // a * e - b * b <= 1e-12, as positronic-franka#32 tests it; the FR3 self pairs keep it
 };
 
 // The closest points of segments [p1, q1] and [p2, q2] (Ericson, Real-Time Collision Detection, 5.1.9).

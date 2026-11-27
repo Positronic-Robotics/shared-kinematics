@@ -448,6 +448,19 @@ Guard one_joint_guard(const Vector3d& a, const Vector3d& b, double radius) {
   return Guard(m);
 }
 
+void a_self_pair_outside_the_fr3_table_tests_parallel_axes_by_angle() {
+  shared_kinematics::ArmModel m;
+  const Vector3d z = Vector3d::UnitZ();
+  m.chain = shared_kinematics::Chain({{"base", -1, Eigen::Isometry3d::Identity(), -1, z},
+                                      {"arm", 0, Eigen::Isometry3d::Identity(), 0, z}});
+  m.self.capsules = {{"long", 0, Vector3d(0, 0, 0), Vector3d(0.2, 0, 0), 0.0},
+                     {"short", 1, Vector3d(0.1, -2e-6, 0), Vector3d(0.1, 2e-6, 0), 0.0}};
+  m.self.pairs = {{"long-short", {0}, {1}}};
+  m.self.clearance = 0.01;
+  const auto d = Guard(m).distances(VectorXd::Zero(1));
+  check(std::abs(d.pairs.at(0).clearance) < 1e-9, "the crossing pair is " + str(d.pairs.at(0).clearance) + " m apart");
+}
+
 void short_crossing_segments_are_not_parallel() {
   const auto [p, o] = shared_kinematics::closest_points_of_segments(Vector3d(0, 0, 0), Vector3d(0.2, 0, 0),
                                                                     Vector3d(0.1, -2e-6, 0), Vector3d(0.1, 2e-6, 0));
@@ -514,6 +527,8 @@ int main() {
       {"speed_scale_is_one_far_from_all_sides", speed_scale_is_one_far_from_all_sides},
       {"speed_scale_keeps_the_step_direction_and_obeys_a3", speed_scale_keeps_the_step_direction_and_obeys_a3},
       {"speed_scale_obeys_a3b_for_a_pad_at_the_desk", speed_scale_obeys_a3b_for_a_pad_at_the_desk},
+      {"a_self_pair_outside_the_fr3_table_tests_parallel_axes_by_angle",
+       a_self_pair_outside_the_fr3_table_tests_parallel_axes_by_angle},
       {"short_crossing_segments_are_not_parallel", short_crossing_segments_are_not_parallel},
       {"a_move_away_from_the_nearest_capsule_of_another_body_goes_through",
        a_move_away_from_the_nearest_capsule_of_another_body_goes_through},

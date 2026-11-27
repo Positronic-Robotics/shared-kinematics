@@ -21,6 +21,7 @@ using shared_kinematics::Body;
 using shared_kinematics::Capsule;
 using shared_kinematics::Chain;
 using shared_kinematics::Link;
+using shared_kinematics::ParallelTest;
 using shared_kinematics::Role;
 using shared_kinematics::SelfPair;
 
@@ -33,10 +34,13 @@ inline Eigen::Isometry3d origin(double x, double y, double z, double roll) {
   return t;
 }
 
+inline const std::array<double, 7> kLower = {-2.7437, -1.7837, -2.9007, -3.0421, -2.8065, 0.5445, -3.0159};
+inline const std::array<double, 7> kUpper = {2.7437, 1.7837, 2.9007, -0.1518, 2.8065, 4.5169, 3.0159};
+
 // base, link0 .. link7, link8 (the flange): link k of the FR3 has index k + 1.
 inline Chain chain() {
   const Eigen::Vector3d z = Eigen::Vector3d::UnitZ();
-  return Chain({
+  std::vector<Link> links({
       {"base", -1, Eigen::Isometry3d::Identity(), -1, z},
       {"link0", 0, Eigen::Isometry3d::Identity(), -1, z},
       {"link1", 1, origin(0, 0, 0.333, 0), 0, z},
@@ -48,6 +52,12 @@ inline Chain chain() {
       {"link7", 7, origin(0.088, 0, 0, kHalfPi), 6, z},
       {"link8", 8, origin(0, 0, 0.107, 0), -1, z},
   });
+  for (Link& link : links)
+    if (link.joint >= 0) {
+      link.lower = kLower[link.joint];
+      link.upper = kUpper[link.joint];
+    }
+  return Chain(links);
 }
 
 inline constexpr int kFlange = 9;
@@ -81,7 +91,7 @@ inline const std::array<std::pair<int, int>, 8> kPairs = {
 inline std::vector<SelfPair> self_pairs(const std::vector<Capsule>& capsules) {
   std::vector<SelfPair> out;
   for (const auto& [la, lb] : kPairs) {
-    SelfPair pair{"link" + std::to_string(la) + "-link" + std::to_string(lb), {}, {}};
+    SelfPair pair{"link" + std::to_string(la) + "-link" + std::to_string(lb), {}, {}, ParallelTest::kFranka32};
     for (int i = 0; i < static_cast<int>(capsules.size()); ++i) {
       if (capsules[i].link == la + 1) pair.a.push_back(i);
       if (capsules[i].link == lb + 1) pair.b.push_back(i);
@@ -114,8 +124,6 @@ inline ArmModel model(const Eigen::Isometry3d& base_pose = Eigen::Isometry3d::Id
   return m;
 }
 
-inline const std::array<double, 7> kLower = {-2.7437, -1.7837, -2.9007, -3.0421, -2.8065, 0.5445, -3.0159};
-inline const std::array<double, 7> kUpper = {2.7437, 1.7837, 2.9007, -0.1518, 2.8065, 4.5169, 3.0159};
 
 inline Eigen::VectorXd random_q(std::mt19937& rng) {
   std::uniform_real_distribution<double> u(0.0, 1.0);

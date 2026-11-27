@@ -10,6 +10,7 @@
 #include <Eigen/Geometry>
 
 #include "chain.hpp"
+#include "geometry.hpp"
 
 namespace shared_kinematics {
 
@@ -37,6 +38,7 @@ struct SelfPair {
   std::string name;
   std::vector<int> a;
   std::vector<int> b;
+  ParallelTest parallel = ParallelTest::kAngle;
 };
 
 // The self-collision model: its own capsules, the checked pairs, and the least clearance.

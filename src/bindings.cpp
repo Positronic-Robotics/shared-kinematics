@@ -24,16 +24,20 @@ PYBIND11_MODULE(_core, m) {
 
   py::class_<sk::Link>(m, "Link")
       .def(py::init([](std::string name, int parent, const Eigen::Matrix4d& origin, int joint,
-                       const Eigen::Vector3d& axis) {
-             return sk::Link{std::move(name), parent, isometry(origin), joint, axis};
+                       const Eigen::Vector3d& axis, double lower, double upper) {
+             return sk::Link{std::move(name), parent, isometry(origin), joint, axis, lower, upper};
            }),
            py::arg("name"), py::arg("parent"), py::arg("origin") = Eigen::Matrix4d::Identity().eval(),
-           py::arg("joint") = -1, py::arg("axis") = Eigen::Vector3d::UnitZ().eval())
+           py::arg("joint") = -1, py::arg("axis") = Eigen::Vector3d::UnitZ().eval(),
+           py::arg("lower") = -std::numeric_limits<double>::infinity(),
+           py::arg("upper") = std::numeric_limits<double>::infinity())
       .def_readonly("name", &sk::Link::name)
       .def_readonly("parent", &sk::Link::parent)
       .def_property_readonly("origin", [](const sk::Link& l) { return Eigen::Matrix4d(l.origin.matrix()); })
       .def_readonly("joint", &sk::Link::joint)
-      .def_readonly("axis", &sk::Link::axis);
+      .def_readonly("axis", &sk::Link::axis)
+      .def_readonly("lower", &sk::Link::lower)
+      .def_readonly("upper", &sk::Link::upper);
 
   py::class_<sk::Chain>(m, "Chain")
       .def(py::init<std::vector<sk::Link>>(), py::arg("links"))
@@ -71,11 +75,17 @@ PYBIND11_MODULE(_core, m) {
       .def_readonly("role", &sk::Body::role)
       .def_readonly("in_planes", &sk::Body::in_planes);
 
+  py::enum_<sk::ParallelTest>(m, "ParallelTest")
+      .value("ANGLE", sk::ParallelTest::kAngle)
+      .value("FRANKA_32", sk::ParallelTest::kFranka32);
+
   py::class_<sk::SelfPair>(m, "SelfPair")
-      .def(py::init<std::string, std::vector<int>, std::vector<int>>(), py::arg("name"), py::arg("a"), py::arg("b"))
+      .def(py::init<std::string, std::vector<int>, std::vector<int>, sk::ParallelTest>(), py::arg("name"),
+           py::arg("a"), py::arg("b"), py::arg("parallel") = sk::ParallelTest::kAngle)
       .def_readonly("name", &sk::SelfPair::name)
       .def_readonly("a", &sk::SelfPair::a)
-      .def_readonly("b", &sk::SelfPair::b);
+      .def_readonly("b", &sk::SelfPair::b)
+      .def_readonly("parallel", &sk::SelfPair::parallel);
 
   py::class_<sk::SelfCollision>(m, "SelfCollision")
       .def(py::init<std::vector<sk::Capsule>, std::vector<sk::SelfPair>, double>(), py::arg("capsules"),

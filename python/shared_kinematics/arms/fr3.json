@@ -149,6 +149,7 @@
     }
   ],
   "self_collision": {
+    "parallel_test": "franka32",
     "source": "franka_description: the *_sc capsules of robots/common/franka_arm.xacro and the arm link pairs of its SRDF, as positronic-franka 0.12.3 checks them",
     "clearance": 0.09,
     "capsules": [

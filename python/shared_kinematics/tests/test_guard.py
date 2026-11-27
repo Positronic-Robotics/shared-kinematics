@@ -130,3 +130,13 @@ def test_a_wall_near_the_base_stops_link1_as_joint1_turns():
     start = np.array([0.0, -1.7, 0.0, -0.2, 0.0, 0.55, 0.0])
     result = bare.clip(start, start + np.array([np.pi / 2, 0, 0, 0, 0, 0, 0]))
     assert result.bound_sides == ['front'] and result.fraction < 1.0
+
+
+def test_a_slide_keeps_the_joint_limits(fr3):
+    side = sk.Side(name='s', kind='virtual', n=(-0.4402254532, 0.1760901813, 0.8804509063), d=0.1521257743)
+    guard = sk.guard(fr3, sk.Box(sides=[side], margin=0.0))
+    start = np.array([0, 0.2, 0, -2.2, 0, 2.4, 3.0149])
+    target = np.array([0, 0.25, 0, -2.2, 0, 2.4, 3.0159])
+    result = guard.clip(start, target)
+    assert result.slid
+    assert np.all(result.q >= LOWER) and np.all(result.q <= UPPER)

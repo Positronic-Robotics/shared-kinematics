@@ -4,11 +4,12 @@ from collections.abc import Sequence
 
 import numpy as np
 
-from ._core import ArmModel, Body, Capsule, Chain, Role, SelfCollision, SelfPair
+from ._core import ArmModel, Body, Capsule, Chain, ParallelTest, Role, SelfCollision, SelfPair
 from .tables import ArmTable, Attachment, GripperTable, MountedCapsule
 from .urdf import chain_from_urdf
 
 _ROLES = {'pad': Role.PAD, 'rigid': Role.RIGID}
+_PARALLEL_TESTS = {'angle': ParallelTest.ANGLE, 'franka32': ParallelTest.FRANKA_32}
 
 
 def _link(chain: Chain, name: str) -> int:
@@ -50,6 +51,7 @@ def _self_collision(chain: Chain, table: ArmTable, attachments: Sequence[Attachm
     else:
         rows = [(c.link, c.link, c.a, c.b, c.radius) for c in table.capsules]
     pairs = list(own.pairs) if own.pairs is not None else pairs_two_joints_apart(chain, [r[0] for r in rows])
+    own_pairs = len(pairs)
     clearance = own.clearance
     groups = {link for link, *_ in rows}
     for attachment in attachments:
@@ -64,13 +66,15 @@ def _self_collision(chain: Chain, table: ArmTable, attachments: Sequence[Attachm
         pairs += [(g, attachment.name) for g in others]
     capsules = [Capsule(group, _link(chain, link), np.array(a), np.array(b), r) for group, link, a, b, r in rows]
     names = [group for group, *_ in rows]
+    own_test = _PARALLEL_TESTS[own.parallel_test]
     self_pairs = []
-    for first, second in pairs:
+    for index, (first, second) in enumerate(pairs):
         a = [i for i, n in enumerate(names) if n == first]
         b = [i for i, n in enumerate(names) if n == second]
         if not a or not b:
             raise ValueError(f'self pair {first}-{second} names a group with no capsule')
-        self_pairs.append(SelfPair(f'{first}-{second}', a, b))
+        parallel = own_test if index < own_pairs else ParallelTest.ANGLE
+        self_pairs.append(SelfPair(f'{first}-{second}', a, b, parallel))
     return SelfCollision(capsules, self_pairs, clearance)
 
 

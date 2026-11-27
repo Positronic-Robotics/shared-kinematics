@@ -1,5 +1,6 @@
 """Build a `Chain` from a URDF: the links that the named joints and fixed joints reach from the root."""
 
+import math
 import xml.etree.ElementTree as ET
 from collections.abc import Sequence
 
@@ -30,11 +31,14 @@ def _link_of(joint: ET.Element, child: str, parent: int, index: int) -> Link:
         raise ValueError(
             f'joint {joint.attrib["name"]} is {joint.attrib.get("type")}; the chain takes revolute joints only'
         )
-    origin, axis = joint.find('origin'), joint.find('axis')
+    origin, axis, limit = joint.find('origin'), joint.find('axis'), joint.find('limit')
     xyz = _floats(origin.get('xyz') if origin is not None else None, (0.0, 0.0, 0.0))
     rpy = _floats(origin.get('rpy') if origin is not None else None, (0.0, 0.0, 0.0))
     turn = _floats(axis.get('xyz') if axis is not None else None, (1.0, 0.0, 0.0))
-    return Link(child, parent, origin_matrix(xyz, rpy), index, turn)
+    bounded = index >= 0 and joint.attrib.get('type') == 'revolute' and limit is not None
+    lower = float(limit.get('lower', 0.0)) if bounded else -math.inf
+    upper = float(limit.get('upper', 0.0)) if bounded else math.inf
+    return Link(child, parent, origin_matrix(xyz, rpy), index, turn, lower, upper)
 
 
 def chain_from_urdf(urdf: str, joints: Sequence[str]) -> Chain:

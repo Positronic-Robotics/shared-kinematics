@@ -46,6 +46,7 @@ class SelfCollisionTable(_Frozen):
     clearance: float
     capsules: list[SelfCapsule] | None = None
     pairs: list[tuple[str, str]] | None = None
+    parallel_test: Literal['angle', 'franka32'] = 'angle'  # how the pairs of this table test parallel axes
 
 
 class ArmTable(_Frozen):

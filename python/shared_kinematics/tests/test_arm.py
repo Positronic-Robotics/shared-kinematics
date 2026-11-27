@@ -73,3 +73,10 @@ def test_an_unknown_link_or_a_bad_base_pose_is_refused():
         )
     with pytest.raises(ValueError):
         sk.load_arm(FR3_URDF, FR3, base_pose=np.full((4, 4), np.nan))
+
+
+def test_the_fr3_pairs_keep_the_parallel_test_of_32_and_an_attachment_pair_tests_by_angle():
+    model = sk.load_arm(FR3_URDF, FR3, GRIPPER, [wrist_camera()])
+    tests = {p.name: p.parallel for p in model.self_collision.pairs}
+    assert tests['link0-link5'] == sk.ParallelTest.FRANKA_32
+    assert tests['link0-wrist_camera'] == sk.ParallelTest.ANGLE

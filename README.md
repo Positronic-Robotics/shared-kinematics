@@ -14,7 +14,7 @@ A driver holds one `Guard` per arm. The guard knows the arm model, the box of th
   joint move from `q_from` to `q_to` and stops it at the first point where a part of the arm meets its floor: a
   side of the box, the self-collision clearance, or the clearance to another body. When a side or another body stops
   the move, one slide removes from the rest of the move its part along the binding checks, and walks again. The
-  result is the committed target.
+  slid target keeps the joint limits of the URDF. The result is the committed target.
 - `speed_scale(q, dq_step, dt, others)` runs once per tick of the fast loop. It gives one factor in [0, 1] on the
   whole joint step, so the step keeps its direction and stays on the straight joint line that clip checked.
 - `distances(q, others)` gives each plane distance, each self-pair clearance and each clearance to another body, with
@@ -126,7 +126,8 @@ The C++ side has no URDF parser. Python reads the URDF and builds the chain (`ch
   model has its clearance, and optionally its own capsules and link pairs. With no capsules, it uses the arm
   capsules; with no pairs, it checks every link pair two or more joints apart.
 - **FR3**: the self-collision model is the capsule set and the SRDF link pairs of franka_description, at 0.09 m, as
-  positronic-franka 0.12.3 checks them. The fitted capsules hold the link meshes for the box and the other bodies.
+  positronic-franka 0.12.3 checks them, with its test for parallel axes (`parallel_test: franka32`). Every other
+  self pair, an attachment pair too, tests parallel axes by their angle. The fitted capsules hold the link meshes for the box and the other bodies.
   `link0` is fixed to the mount and stays out of the plane checks. `link1` turns with joint 1, so the box bounds it.
 - **Gripper table** (`grippers/<gripper>.json`): capsules in the flange axes that hold the gripper over its whole grip
   range. `robotiq_2f85`: two rigid body capsules and one pad capsule per finger.
