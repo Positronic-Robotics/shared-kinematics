@@ -82,13 +82,13 @@ double least_to_floor_on_the_move(const Guard& guard, const VectorXd& from, cons
 VectorXd move_pad(const Guard& guard, const VectorXd& q, const Vector3d& dx, const VectorXd& extra) {
   const auto f = guard.model().chain.frames(q);
   const Vector3d p = f[fr3::kFlange] * fr3::kPadPoint;
-  Eigen::Matrix<double, 3, Eigen::Dynamic> J(3, 7);
+  Eigen::Matrix<double, 3, 7> J;
   for (int j = 0; j < 7; ++j) {
     VectorXd e = VectorXd::Zero(7);
     e(j) = 1.0;
     J.col(j) = guard.model().chain.point_velocity(f, fr3::kFlange, p, e);
   }
-  return q + J.completeOrthogonalDecomposition().solve(dx) + extra;
+  return q + J.transpose() * (J * J.transpose()).ldlt().solve(dx) + extra;
 }
 
 Plane plane(const std::string& name, const Vector3d& n, const Vector3d& through, double pad_allowance = 0.0,
