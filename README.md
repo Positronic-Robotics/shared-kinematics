@@ -127,7 +127,7 @@ The C++ side has no URDF parser. Python reads the URDF and builds the chain (`ch
   capsules; with no pairs, it checks every link pair two or more joints apart.
 - **FR3**: the self-collision model is the capsule set and the SRDF link pairs of franka_description, at 0.09 m, as
   positronic-franka 0.12.3 checks them. The fitted capsules hold the link meshes for the box and the other bodies.
-  `link0` and `link1` sit on the mount and stay out of the plane checks.
+  `link0` is fixed to the mount and stays out of the plane checks. `link1` turns with joint 1, so the box bounds it.
 - **Gripper table** (`grippers/<gripper>.json`): capsules in the flange axes that hold the gripper over its whole grip
   range. `robotiq_2f85`: two rigid body capsules and one pad capsule per finger.
 - **Attachments**: rigid parts such as wrist cameras, one entry per mount type. Each joins the plane checks, and the

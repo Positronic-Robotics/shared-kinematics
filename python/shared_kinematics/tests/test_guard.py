@@ -120,3 +120,13 @@ def test_with_no_box_clip_equals_the_recorded_walks_of_32(fr3):
         equal += bool(np.array_equal(q, row[14:]))
     print(f'{len(rows)} recorded walks, {equal} bit-equal, worst {worst} rad')
     assert worst < 1e-9
+
+
+def test_a_wall_near_the_base_stops_link1_as_joint1_turns():
+    bare = sk.guard(
+        sk.load_arm(FR3_URDF, sk.arm_table('fr3')),
+        sk.Box(sides=[sk.Side(name='front', kind='surface', n=(-1, 0, 0), d=0.12)]),
+    )
+    start = np.array([0.0, -1.7, 0.0, -0.2, 0.0, 0.55, 0.0])
+    result = bare.clip(start, start + np.array([np.pi / 2, 0, 0, 0, 0, 0, 0]))
+    assert result.bound_sides == ['front'] and result.fraction < 1.0

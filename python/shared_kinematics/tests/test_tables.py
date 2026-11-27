@@ -74,6 +74,6 @@ def test_the_fr3_self_collision_table_is_the_srdf_pairs_at_0_09_m():
     assert len(own.capsules) == 10
 
 
-def test_the_base_links_of_the_fr3_stay_out_of_the_box_checks():
+def test_only_the_fixed_base_link_of_the_fr3_stays_out_of_the_box_checks():
     table = sk.arm_table('fr3')
-    assert {c.link for c in table.capsules if not c.in_planes} == {'link0', 'link1'}
+    assert {c.link for c in table.capsules if not c.in_planes} == {'link0'}

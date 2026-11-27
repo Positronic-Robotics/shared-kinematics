@@ -97,7 +97,7 @@ inline const Eigen::Vector3d kPadPoint(0, 0, 0.155);
 // The self capsules of links 2 .. 7 as rigid bodies, a gripper body, and the pad point.
 inline std::vector<Body> bodies() {
   std::vector<Body> out;
-  for (const Capsule& c : self_capsules()) out.push_back({c, Role::kRigid, c.link > 2});
+  for (const Capsule& c : self_capsules()) out.push_back({c, Role::kRigid, c.link > 1});
   out.push_back({{"gripper", kFlange, {0, 0, 0.01}, {0, 0, 0.11}, 0.045}, Role::kRigid, true});
   out.push_back({{"pads", kFlange, kPadPoint, kPadPoint, 0.0}, Role::kPad, true});
   return out;

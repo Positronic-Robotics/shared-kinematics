@@ -193,8 +193,8 @@ def fr3_capsules() -> list[dict]:
     out = []
     for k in range(8):
         points = mesh_points(trimesh.load(MESHES / 'fr3' / f'link{k}.stl'))
-        # link0 and link1 sit on the mount: their place does not change, so the box does not bound them.
-        out += rows(f'link{k}', f'link{k}', fit(points), 'rigid', in_planes=k >= 2)
+        # link0 is fixed to the mount, so the box does not bound it.
+        out += rows(f'link{k}', f'link{k}', fit(points), 'rigid', in_planes=k >= 1)
     return out
 
 
