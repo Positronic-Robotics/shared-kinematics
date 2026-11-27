@@ -236,16 +236,20 @@ class Guard {
         for (const BaseCapsule& c : ctx.others[k]) {
           const double least = (center - c.center).norm() - bound - c.bound - params_.other_clearance;
           if (least > 0 && params_.approach_gain * least >= result.s * fastest) continue;
-          const auto [p, o] = closest_points_of_segments(a, b, c.a, c.b);
-          const double distance = (p - o).norm();
-          const double to_floor = distance - body.capsule.radius - c.radius - params_.other_clearance;
-          if (distance < 1e-12) {
-            limit(fastest, 0.0, name);
-            continue;
+          // On parallel axes the closest point is not unique, so both ends are held too.
+          const Eigen::Vector3d nearest = closest_points_of_segments(a, b, c.a, c.b).first;
+          for (const Eigen::Vector3d& p : {nearest, a, b}) {
+            const Eigen::Vector3d o = closest_points_of_segments(p, p, c.a, c.b).second;
+            const double distance = (p - o).norm();
+            const double to_floor = distance - body.capsule.radius - c.radius - params_.other_clearance;
+            if (distance < 1e-12) {
+              limit(fastest, 0.0, name);
+              continue;
+            }
+            const Eigen::Vector3d away = (p - o) / distance;
+            const double approach = -away.dot(velocity(body.capsule.link, p));
+            limit(approach, params_.approach_gain * std::max(0.0, to_floor), name);
           }
-          const Eigen::Vector3d away = (p - o) / distance;
-          const double approach = -away.dot(velocity(body.capsule.link, p));
-          limit(approach, params_.approach_gain * std::max(0.0, to_floor), name);
         }
       }
     }
@@ -403,8 +407,8 @@ class Guard {
     }
   }
 
-  // The value of check k at the pose in ctx. Without the gradient, an other-body check may stop at the first
-  // capsule below `below`. An other-body check reads only the capsules in `near`.
+  // The value of check k at the pose in ctx. With a finite `below` and no gradient, an other-body check may stop at
+  // the first capsule below `below`. An other-body check reads only the capsules in `near`.
   Value evaluate(const Context& ctx, int k, bool with_gradient,
                  double below = std::numeric_limits<double>::infinity(), const Near& near = {}) const {
     const Location at = locate(ctx, k);
@@ -457,7 +461,7 @@ class Guard {
       if (with_gradient) {
         const Eigen::Vector3d n = distance > 1e-9 ? Eigen::Vector3d((p - o) / distance) : Eigen::Vector3d::Zero();
         model_.chain.point_speed_along(ctx.f, body.capsule.link, p, n, v.gradient);
-      } else if (v.value < below) {
+      } else if (std::isfinite(below) && v.value < below) {
         return v;
       }
     }
@@ -476,7 +480,7 @@ class Guard {
     std::vector<double> floors(check_count(ctx));
     for (int k = 0; k < check_count(ctx); ++k) {
       const double limit = limit_of(ctx, k);
-      floors[k] = std::min(limit, evaluate(ctx, k, false, limit).value);
+      floors[k] = std::min(limit, evaluate(ctx, k, false).value);
     }
     return floors;
   }

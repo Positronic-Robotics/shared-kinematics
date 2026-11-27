@@ -433,6 +433,41 @@ void speed_scale_slows_a_part_that_approaches_another_body() {
   check(bare_guard().speed_scale(low, -dq, dt, {other}).s == 1.0, "the other body slows a step away from it");
 }
 
+// One link that turns about z at the origin and holds one capsule from a to b.
+Guard one_joint_guard(const Vector3d& a, const Vector3d& b, double radius) {
+  shared_kinematics::ArmModel m;
+  const Vector3d z = Vector3d::UnitZ();
+  m.chain = shared_kinematics::Chain({{"base", -1, Eigen::Isometry3d::Identity(), -1, z},
+                                      {"arm", 0, Eigen::Isometry3d::Identity(), 0, z}});
+  m.bodies = {{{"arm", 1, a, b, radius}, shared_kinematics::Role::kRigid, true}};
+  return Guard(m);
+}
+
+void short_crossing_segments_are_not_parallel() {
+  const auto [p, o] = shared_kinematics::closest_points_of_segments(Vector3d(0, 0, 0), Vector3d(0.2, 0, 0),
+                                                                    Vector3d(0.1, -2e-6, 0), Vector3d(0.1, 2e-6, 0));
+  check((p - o).norm() < 1e-9, "the crossing segments are " + str((p - o).norm()) + " m apart");
+}
+
+void a_move_away_from_the_nearest_capsule_of_another_body_goes_through() {
+  const Guard guard = one_joint_guard(Vector3d(0.3, 0, 0), Vector3d(0.3, 0, 0), 0.01);
+  // Clearance 0.04 m to the first capsule and 0.01 m to the second; the move takes the second to 0.02 m.
+  const OtherBody other = {{Vector3d(0.3, 0, 0.05), Vector3d(0.3, 0, 0.05), 0.0},
+                           {Vector3d(0.3, -0.02, 0), Vector3d(0.3, -0.02, 0), 0.0}};
+  const VectorXd from = VectorXd::Zero(1), to = VectorXd::Constant(1, 0.033);
+  const ClipResult r = guard.clip(from, to, {other});
+  check(r.fraction == 1.0 && r.others_bound.empty(), "the move away stops at " + str(r.fraction));
+}
+
+void speed_scale_holds_the_fastest_end_of_a_part_parallel_to_another_body() {
+  const Guard guard = one_joint_guard(Vector3d(0, 0, 0), Vector3d(0.1, 0, 0), 0.01);
+  const OtherBody other = {{Vector3d(0, 0.071, 0), Vector3d(0.1, 0.071, 0), 0.01}};
+  const double dt = 0.001;
+  // The far end moves toward the other body at 0.1 m/s; 1 mm to its floor allows 0.002 m/s.
+  const auto s = guard.speed_scale(VectorXd::Zero(1), VectorXd::Constant(1, dt), dt, {other});
+  check(std::abs(s.s - 0.02) < 1e-6, "the step keeps scale " + str(s.s));
+}
+
 }  // namespace
 
 int main() {
@@ -457,6 +492,11 @@ int main() {
       {"speed_scale_is_one_far_from_all_sides", speed_scale_is_one_far_from_all_sides},
       {"speed_scale_keeps_the_step_direction_and_obeys_a3", speed_scale_keeps_the_step_direction_and_obeys_a3},
       {"speed_scale_obeys_a3b_for_a_pad_at_the_desk", speed_scale_obeys_a3b_for_a_pad_at_the_desk},
+      {"short_crossing_segments_are_not_parallel", short_crossing_segments_are_not_parallel},
+      {"a_move_away_from_the_nearest_capsule_of_another_body_goes_through",
+       a_move_away_from_the_nearest_capsule_of_another_body_goes_through},
+      {"speed_scale_holds_the_fastest_end_of_a_part_parallel_to_another_body",
+       speed_scale_holds_the_fastest_end_of_a_part_parallel_to_another_body},
       {"speed_scale_slows_a_part_that_approaches_another_body",
        speed_scale_slows_a_part_that_approaches_another_body},
   };

@@ -22,7 +22,8 @@ inline std::pair<Eigen::Vector3d, Eigen::Vector3d> closest_points_of_segments(co
   if (e <= kPoint) return {p1 + std::clamp(-c / a, 0.0, 1.0) * d1, p2};
   const double b = d1.dot(d2);
   const double denom = a * e - b * b;
-  double s = denom > 1e-12 ? std::clamp((b * f - c * e) / denom, 0.0, 1.0) : 0.0;
+  // Parallel when the squared sine of the angle between the axes is below 1e-12.
+  double s = denom > 1e-12 * a * e ? std::clamp((b * f - c * e) / denom, 0.0, 1.0) : 0.0;
   double t = (b * s + f) / e;
   if (t < 0.0) {
     t = 0.0;
