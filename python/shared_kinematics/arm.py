@@ -53,15 +53,16 @@ def _self_collision(chain: Chain, table: ArmTable, attachments: Sequence[Attachm
     pairs = list(own.pairs) if own.pairs is not None else pairs_two_joints_apart(chain, [r[0] for r in rows])
     own_pairs = len(pairs)
     clearance = own.clearance
-    groups = {link for link, *_ in rows}
+    link_of = {group: _link(chain, link) for group, link, *_ in rows}
     for attachment in attachments:
         at = _link(chain, attachment.link)
         others = attachment.pairs_with
         if others is None:
-            reach = [g for g in groups if joints_between(chain, at, _link(chain, g)) >= 2]
-            others = sorted(reach, key=lambda g: _link(chain, g))
-        if attachment.name in groups:
-            raise ValueError(f'attachment {attachment.name} has the name of a link group')
+            reach = [g for g, k in link_of.items() if joints_between(chain, at, k) >= 2]
+            others = sorted(reach, key=link_of.__getitem__)
+        if attachment.name in link_of:
+            raise ValueError(f'attachment {attachment.name} has the name of a group')
+        link_of[attachment.name] = at
         rows.append((attachment.name, attachment.link, attachment.a, attachment.b, attachment.radius))
         pairs += [(g, attachment.name) for g in others]
     capsules = [Capsule(group, _link(chain, link), np.array(a), np.array(b), r) for group, link, a, b, r in rows]

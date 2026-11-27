@@ -76,7 +76,7 @@ class Attachment(_Frozen):
     a: Vec3
     b: Vec3
     radius: Length
-    # The self-collision groups (link names) that the part keeps clear of; None: each link two or more joints away.
+    # The self-collision groups that the part keeps clear of; None: each link and earlier attachment 2+ joints away.
     pairs_with: list[str] | None = None
 
 

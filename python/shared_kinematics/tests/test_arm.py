@@ -63,6 +63,21 @@ def test_a_wrist_camera_joins_the_box_and_the_self_pairs_with_links_two_or_more_
     assert [p.name for p in model.self_collision.pairs if 'camera' in p.name] == ['link2-wrist_camera']
 
 
+def test_a_base_camera_and_a_wrist_camera_two_or_more_joints_apart_form_a_self_pair():
+    base_camera = sk.Attachment(
+        name='base_camera', mount_type='m', link='link0', a=(0.1, 0, 0.1), b=(0.1, 0, 0.2), radius=0.02
+    )
+    model = sk.load_arm(FR3_URDF, FR3, GRIPPER, [base_camera, wrist_camera()])
+    assert 'base_camera-wrist_camera' in [p.name for p in model.self_collision.pairs]
+    same_link = sk.Attachment(
+        name='cable', mount_type='m', link='link8', a=(0, 0.06, 0), b=(0, 0.06, 0.04), radius=0.01
+    )
+    model = sk.load_arm(FR3_URDF, FR3, GRIPPER, [wrist_camera(), same_link])
+    assert 'wrist_camera-cable' not in [p.name for p in model.self_collision.pairs]
+    with pytest.raises(ValueError, match='name of a group'):
+        sk.load_arm(FR3_URDF, FR3, GRIPPER, [wrist_camera(), wrist_camera()])
+
+
 def test_an_unknown_link_or_a_bad_base_pose_is_refused():
     with pytest.raises(ValueError, match='no link'):
         sk.load_arm(

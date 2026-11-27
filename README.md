@@ -132,7 +132,7 @@ The C++ side has no URDF parser. Python reads the URDF and builds the chain (`ch
 - **Gripper table** (`grippers/<gripper>.json`): capsules in the flange axes that hold the gripper over its whole grip
   range. `robotiq_2f85`: two rigid body capsules and one pad capsule per finger.
 - **Attachments**: rigid parts such as wrist cameras, one entry per mount type. Each joins the plane checks, and the
-  self pairs with each link two or more joints away (or the links in `pairs_with`).
+  self pairs with each link and each earlier attachment two or more joints away (or the groups in `pairs_with`).
 
 ## Build and test
 
