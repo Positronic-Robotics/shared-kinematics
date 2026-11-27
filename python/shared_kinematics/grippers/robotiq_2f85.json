@@ -1,0 +1,70 @@
+{
+  "gripper": "robotiq_2f85",
+  "mount": "The 2F-85 coupler on an ISO 9409-1-50 flange, as positronic grafts it on the FR3 flange: 7 mm out, turned 90 degrees about the flange z axis.",
+  "capsules": [
+    {
+      "name": "body_0",
+      "a": [
+        -0.0004,
+        0.0176,
+        0.0216
+      ],
+      "b": [
+        -0.0006,
+        0.03,
+        0.1067
+      ],
+      "radius": 0.0466,
+      "role": "rigid",
+      "in_planes": true
+    },
+    {
+      "name": "body_1",
+      "a": [
+        -0.0002,
+        -0.0242,
+        0.0267
+      ],
+      "b": [
+        0.0003,
+        -0.0399,
+        0.1184
+      ],
+      "radius": 0.0399,
+      "role": "rigid",
+      "in_planes": true
+    },
+    {
+      "name": "left_finger",
+      "a": [
+        0.0001,
+        -0.0155,
+        0.1502
+      ],
+      "b": [
+        -0.0001,
+        -0.0522,
+        0.1241
+      ],
+      "radius": 0.0294,
+      "role": "pad",
+      "in_planes": true
+    },
+    {
+      "name": "right_finger",
+      "a": [
+        -0.0001,
+        0.0155,
+        0.1502
+      ],
+      "b": [
+        0.0001,
+        0.0522,
+        0.1241
+      ],
+      "radius": 0.0294,
+      "role": "pad",
+      "in_planes": true
+    }
+  ]
+}
