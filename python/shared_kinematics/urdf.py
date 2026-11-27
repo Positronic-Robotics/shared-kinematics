@@ -7,8 +7,6 @@ import numpy as np
 
 from ._core import Chain, Link
 
-_TURNING = ('revolute', 'continuous')
-
 
 def _floats(text: str | None, default: tuple[float, float, float]) -> np.ndarray:
     return np.array([float(x) for x in text.split()] if text else default, dtype=float)
@@ -26,19 +24,32 @@ def origin_matrix(xyz: Sequence[float], rpy: Sequence[float]) -> np.ndarray:
     return t
 
 
+def _link_of(joint: ET.Element, child: str, parent: int, index: int) -> Link:
+    """The link `child` below `joint`, whose parent link is link `parent` of the chain and whose joint is `index`."""
+    if index >= 0 and joint.attrib.get('type') not in ('revolute', 'continuous'):
+        raise ValueError(
+            f'joint {joint.attrib["name"]} is {joint.attrib.get("type")}; the chain takes revolute joints only'
+        )
+    origin, axis = joint.find('origin'), joint.find('axis')
+    xyz = _floats(origin.get('xyz') if origin is not None else None, (0.0, 0.0, 0.0))
+    rpy = _floats(origin.get('rpy') if origin is not None else None, (0.0, 0.0, 0.0))
+    turn = _floats(axis.get('xyz') if axis is not None else None, (1.0, 0.0, 0.0))
+    return Link(child, parent, origin_matrix(xyz, rpy), index, turn)
+
+
 def chain_from_urdf(urdf: str, joints: Sequence[str]) -> Chain:
     """The chain of `urdf` whose joint i is the URDF joint `joints[i]`.
 
     A link below a moving joint that `joints` does not name is left out, for example a gripper finger.
     """
     robot = ET.fromstring(urdf)
-    children: dict[str, list[ET.Element]] = {}
+    children: dict[str, list[tuple[ET.Element, str]]] = {}
     child_links = set()
     for joint in robot.iter('joint'):
         parent, child = joint.find('parent'), joint.find('child')
         if parent is None or child is None:
             raise ValueError(f'joint {joint.get("name")} has no parent or child')
-        children.setdefault(parent.attrib['link'], []).append(joint)
+        children.setdefault(parent.attrib['link'], []).append((joint, child.attrib['link']))
         child_links.add(child.attrib['link'])
     roots = [link.attrib['name'] for link in robot.iter('link') if link.attrib['name'] not in child_links]
     if len(roots) != 1:
@@ -49,26 +60,11 @@ def chain_from_urdf(urdf: str, joints: Sequence[str]) -> Chain:
     queue = [(roots[0], 0)]
     while queue:
         parent_name, parent = queue.pop(0)
-        for joint in children.get(parent_name, []):
-            name, kind = joint.attrib['name'], joint.attrib.get('type')
-            if kind != 'fixed' and name not in index:
+        for joint, child in children.get(parent_name, []):
+            name = joint.attrib['name']
+            if joint.attrib.get('type') != 'fixed' and name not in index:
                 continue
-            if name in index and kind not in _TURNING:
-                raise ValueError(f'joint {name} is {kind}; the chain takes revolute joints only')
-            origin = joint.find('origin')
-            xyz = _floats(origin.get('xyz') if origin is not None else None, (0.0, 0.0, 0.0))
-            rpy = _floats(origin.get('rpy') if origin is not None else None, (0.0, 0.0, 0.0))
-            axis = joint.find('axis')
-            child = joint.find('child').attrib['link']  # type: ignore[union-attr]
-            links.append(
-                Link(
-                    child,
-                    parent,
-                    origin_matrix(xyz, rpy),
-                    index.get(name, -1),
-                    _floats(axis.get('xyz') if axis is not None else None, (1.0, 0.0, 0.0)),
-                )
-            )
+            links.append(_link_of(joint, child, parent, index.get(name, -1)))
             found.add(name)
             queue.append((child, len(links) - 1))
     missing = [name for name in joints if name not in found]
