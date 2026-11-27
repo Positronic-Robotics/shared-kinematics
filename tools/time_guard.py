@@ -51,7 +51,7 @@ def time_guard(name: str, guard: sk.Guard, rng: np.random.Generator) -> None:
 
 
 def main() -> None:
-    model = sk.load_arm((ROOT / 'data' / 'fr3.urdf').read_text(), 'fr3', 'robotiq_2f85')
+    model = sk.load_arm((ROOT / 'data' / 'fr3.urdf').read_text(), sk.arm_table('fr3'), sk.gripper_table('robotiq_2f85'))
     rng = np.random.default_rng(7)
     time_guard('no box', sk.guard(model), rng)
     time_guard('box of 5 sides', sk.guard(model, BOX), rng)

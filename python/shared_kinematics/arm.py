@@ -5,7 +5,7 @@ from collections.abc import Sequence
 import numpy as np
 
 from ._core import ArmModel, Body, Capsule, Chain, Role, SelfCollision, SelfPair
-from .tables import ArmTable, Attachment, GripperTable, MountedCapsule, arm_table, gripper_table
+from .tables import ArmTable, Attachment, GripperTable, MountedCapsule
 from .urdf import chain_from_urdf
 
 _ROLES = {'pad': Role.PAD, 'rigid': Role.RIGID}
@@ -76,23 +76,21 @@ def _self_collision(chain: Chain, table: ArmTable, attachments: Sequence[Attachm
 
 def load_arm(
     urdf: str,
-    arm: str | ArmTable = 'fr3',
-    gripper: str | GripperTable | None = None,
+    arm: ArmTable,
+    gripper: GripperTable | None = None,
     attachments: Sequence[Attachment] = (),
     base_pose: np.ndarray | None = None,
 ) -> ArmModel:
     """The model of one arm.
 
-    `urdf` is the arm's URDF text, as its driver reports it. `base_pose` is T_rig_base, the arm base in the rig
-    frame (identity when None). The gripper capsules join the box checks; the attachments join the box checks and
-    the self pairs.
+    `urdf` is the arm's URDF text, as its driver reports it. `arm_table` and `gripper_table` load a bundled table.
+    `base_pose` is T_rig_base, the arm base in the rig frame (identity when None). The gripper capsules join the box
+    checks; the attachments join the box checks and the self pairs.
     """
-    table = arm_table(arm) if isinstance(arm, str) else arm
-    chain = chain_from_urdf(urdf, table.joints)
-    bodies = [_body(chain, c.link, c) for c in table.capsules]
+    chain = chain_from_urdf(urdf, arm.joints)
+    bodies = [_body(chain, c.link, c) for c in arm.capsules]
     if gripper is not None:
-        grip = gripper_table(gripper) if isinstance(gripper, str) else gripper
-        bodies += [_body(chain, table.flange, c) for c in grip.capsules]
+        bodies += [_body(chain, arm.flange, c) for c in gripper.capsules]
     bodies += [_body(chain, a.link, MountedCapsule(name=a.name, a=a.a, b=a.b, radius=a.radius)) for a in attachments]
     pose = np.eye(4) if base_pose is None else np.asarray(base_pose, dtype=float)
-    return ArmModel(chain, bodies, _self_collision(chain, table, attachments), pose)
+    return ArmModel(chain, bodies, _self_collision(chain, arm, attachments), pose)

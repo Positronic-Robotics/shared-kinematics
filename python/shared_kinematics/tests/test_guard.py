@@ -57,7 +57,7 @@ def test_a_box_refuses_a_negative_travel_or_margin():
 def test_the_planes_stay_in_the_rig_frame_and_each_arm_reads_them_through_its_base_pose(fr3, low):
     raised = np.eye(4)
     raised[2, 3] = 0.1
-    lifted = sk.load_arm(FR3_URDF, 'fr3', 'robotiq_2f85', base_pose=raised)
+    lifted = sk.load_arm(FR3_URDF, sk.arm_table('fr3'), sk.gripper_table('robotiq_2f85'), base_pose=raised)
     box = desk_and_walls(z=0.0)
     at_origin = {r.body: r.distance for r in sk.guard(fr3, box).distances(low).planes if r.side == 'desk'}
     at_lift = {r.body: r.distance for r in sk.guard(lifted, box).distances(low).planes if r.side == 'desk'}
@@ -89,7 +89,10 @@ def test_two_arms_keep_their_clearance_across_the_other_arms_committed_move(fr3,
     facing = np.eye(4)
     facing[:3, :3] = np.diag([-1.0, -1.0, 1.0])
     facing[0, 3] = 1.4
-    a, b = sk.guard(fr3), sk.guard(sk.load_arm(FR3_URDF, 'fr3', 'robotiq_2f85', base_pose=facing))
+    a, b = (
+        sk.guard(fr3),
+        sk.guard(sk.load_arm(FR3_URDF, sk.arm_table('fr3'), sk.gripper_table('robotiq_2f85'), base_pose=facing)),
+    )
     reach = low.copy()
     reach[1] += 0.5
     reach[3] += 0.6

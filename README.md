@@ -55,7 +55,7 @@ A driver maps an absent or disabled rig-config entry to `box=None` at start-up. 
 ```python
 import shared_kinematics as sk
 
-model = sk.load_arm(urdf, arm='fr3', gripper='robotiq_2f85', attachments=(), base_pose=None)
+model = sk.load_arm(urdf, sk.arm_table('fr3'), sk.gripper_table('robotiq_2f85'), attachments=(), base_pose=None)
 box = sk.Box(
     sides=[
         sk.Side(name='desk', kind='surface', n=(0, 0, 1), d=0.0),
@@ -79,7 +79,8 @@ now = guard.capsules_at(q)  # list[WorldCapsule], rig frame, for speed_scale
 
 | Name | Signature |
 |---|---|
-| `load_arm` | `(urdf: str, arm: str \| ArmTable = 'fr3', gripper: str \| GripperTable \| None = None, attachments: Sequence[Attachment] = (), base_pose: ndarray[4, 4] \| None = None) -> ArmModel` |
+| `load_arm` | `(urdf: str, arm: ArmTable, gripper: GripperTable \| None = None, attachments: Sequence[Attachment] = (), base_pose: ndarray[4, 4] \| None = None) -> ArmModel` |
+| `arm_table`, `gripper_table` | `(name: str) -> ArmTable`, `(name: str) -> GripperTable`: the bundled tables, for example `fr3` and `robotiq_2f85` |
 | `guard` | `(model: ArmModel, box: Box \| None = None, params: GuardParams \| None = None) -> Guard` |
 | `Guard.clip` | `(q_from, q_to, others: list[list[WorldCapsule]] = []) -> ClipResult` |
 | `Guard.speed_scale` | `(q, dq_step, dt: float, others: list[list[WorldCapsule]] = []) -> ScaleResult` |

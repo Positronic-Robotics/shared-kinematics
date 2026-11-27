@@ -10,7 +10,7 @@ FR3_URDF = (REPO / 'data' / 'fr3.urdf').read_text()
 
 @pytest.fixture(scope='session')
 def fr3() -> sk.ArmModel:
-    return sk.load_arm(FR3_URDF, 'fr3', 'robotiq_2f85')
+    return sk.load_arm(FR3_URDF, sk.arm_table('fr3'), sk.gripper_table('robotiq_2f85'))
 
 
 @pytest.fixture(scope='session')
