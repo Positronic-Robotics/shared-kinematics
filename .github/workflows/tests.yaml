@@ -1,0 +1,78 @@
+name: Tests
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: astral-sh/setup-uv@v5
+
+      - name: Check the Python style
+        run: |
+          uvx ruff check .
+          uvx ruff format --check .
+
+  # The tests include Eigen as a system header (-isystem). -Werror then applies to the code of this repository,
+  # not to the warnings in the Eigen headers.
+  cpp:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Eigen
+        run: sudo apt-get update && sudo apt-get install -y libeigen3-dev
+
+      - name: Run the guard tests
+        run: |
+          g++ -std=c++17 -O2 -Wall -Wextra -Werror -I include -I tests -isystem /usr/include/eigen3 \
+            tests/test_guard.cpp -o test_guard
+          ./test_guard
+
+      - name: Time clip and speed_scale
+        run: |
+          g++ -std=c++17 -O2 -DNDEBUG -Wall -Wextra -Werror -I include -I tests -isystem /usr/include/eigen3 \
+            tests/bench_guard.cpp -o bench_guard
+          ./bench_guard
+
+  # No system Eigen here: CMake fetches the Eigen release archive.
+  cmake:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build and run the C++ tests with CMake
+        run: |
+          cmake -S . -B build -DCMAKE_BUILD_TYPE=Release -DSHARED_KINEMATICS_PYTHON=OFF -DSHARED_KINEMATICS_TESTS=ON
+          cmake --build build -j 4
+          ctest --test-dir build --output-on-failure
+
+  python:
+    strategy:
+      fail-fast: false
+      matrix:
+        python: ["3.11", "3.12", "3.13"]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Eigen
+        run: sudo apt-get update && sudo apt-get install -y libeigen3-dev
+
+      - uses: astral-sh/setup-uv@v5
+
+      - name: Build the module
+        run: |
+          uv venv --python ${{ matrix.python }}
+          uv pip install --python .venv/bin/python . pytest pytest-xdist trimesh scipy
+
+      - name: Run the Python tests
+        run: .venv/bin/python -m pytest -n 4 python

@@ -1,0 +1,2 @@
+The Robotiq 2F-85 meshes come from MuJoCo Menagerie robotiq_2f85 (ROS-Industrial robotiq description), scaled to
+metres, through the positronic repository (positronic/assets/robotiq_2f85). LICENSE in this directory applies.

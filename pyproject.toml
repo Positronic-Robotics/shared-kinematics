@@ -1,0 +1,56 @@
+[build-system]
+requires = ["scikit-build-core>=0.10", "pybind11>=2.13"]
+build-backend = "scikit_build_core.build"
+
+[project]
+name = "shared-kinematics"
+version = "0.1.0"
+description = "Arm models and the box and clearance checks that arm drivers share"
+readme = "README.md"
+requires-python = ">=3.11"
+license = { text = "Apache-2.0" }
+authors = [{ name = "Positronic" }]
+dependencies = ["numpy>=1.22", "pydantic>=2"]
+classifiers = [
+  "License :: OSI Approved :: Apache Software License",
+  "Programming Language :: Python :: 3",
+  "Programming Language :: C++",
+  "Programming Language :: Python :: Implementation :: CPython",
+]
+
+[dependency-groups]
+dev = ["pytest", "pytest-xdist", "ruff", "pre-commit", "trimesh", "scipy"]
+
+[tool.scikit-build]
+minimum-version = "build-system.requires"
+cmake.version = ">=3.18"
+wheel.packages = ["python/shared_kinematics"]
+wheel.exclude = ["shared_kinematics/tests/**"]
+build-dir = "build/{wheel_tag}"
+
+[tool.ruff]
+line-length = 120
+target-version = "py311"
+
+[tool.ruff.lint]
+select = ["E", "W", "F", "I", "B", "C4", "UP", "PLC0415", "C90"]
+ignore = ["E203"]
+
+[tool.ruff.lint.per-file-ignores]
+"__init__.py" = ["F401"]
+
+[tool.ruff.lint.isort]
+split-on-trailing-comma = false
+
+[tool.ruff.lint.mccabe]
+max-complexity = 15
+
+[tool.ruff.format]
+quote-style = "single"
+indent-style = "space"
+docstring-code-format = true
+preview = true
+skip-magic-trailing-comma = true
+
+[tool.pytest.ini_options]
+testpaths = ["python"]
