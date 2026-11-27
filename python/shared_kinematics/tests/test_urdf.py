@@ -77,3 +77,16 @@ def test_a_joint_with_no_axis_turns_about_x():
     )
     chain = sk.chain_from_urdf(urdf, ['j'])
     np.testing.assert_allclose(chain.links[1].axis, [1, 0, 0])
+
+
+def test_a_transmission_in_the_urdf_does_not_add_a_joint():
+    transmission = (
+        '<transmission name="t1"><type>transmission_interface/SimpleTransmission</type>'
+        '<joint name="joint1"><hardwareInterface>EffortJointInterface</hardwareInterface></joint>'
+        '<actuator name="m1"><mechanicalReduction>1</mechanicalReduction></actuator></transmission>'
+    )
+    with_transmission = FR3_URDF.replace('</robot>', transmission + '</robot>')
+    q = np.array([0.1, -0.2, 0.3, -1.5, 0.2, 1.8, 0.4])
+    plain = sk.chain_from_urdf(FR3_URDF, FR3_JOINTS).frames(q)
+    other = sk.chain_from_urdf(with_transmission, FR3_JOINTS).frames(q)
+    assert len(plain) == len(other) and all(np.allclose(a, b) for a, b in zip(plain, other, strict=True))

@@ -45,13 +45,13 @@ def chain_from_urdf(urdf: str, joints: Sequence[str]) -> Chain:
     robot = ET.fromstring(urdf)
     children: dict[str, list[tuple[ET.Element, str]]] = {}
     child_links = set()
-    for joint in robot.iter('joint'):
+    for joint in robot.findall('joint'):
         parent, child = joint.find('parent'), joint.find('child')
         if parent is None or child is None:
             raise ValueError(f'joint {joint.get("name")} has no parent or child')
         children.setdefault(parent.attrib['link'], []).append((joint, child.attrib['link']))
         child_links.add(child.attrib['link'])
-    roots = [link.attrib['name'] for link in robot.iter('link') if link.attrib['name'] not in child_links]
+    roots = [link.attrib['name'] for link in robot.findall('link') if link.attrib['name'] not in child_links]
     if len(roots) != 1:
         raise ValueError(f'the URDF has {len(roots)} root links, not one')
     index = {name: i for i, name in enumerate(joints)}
