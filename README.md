@@ -37,7 +37,8 @@ A driver holds one `Guard` per arm. The guard knows the arm model, the box of th
 Near a floor, each part moves toward it at most `approach_gain` times its distance to the floor (`k`, 2.0/s). A pad
 that may go below the desk meets the desk top at most at `touch_speed` (`v_touch`, 0.05 m/s); the limit falls
 linearly to 0 at the pad floor. Above the desk top the limit is `v_touch + k * height`. Near another body the limit
-is `k` times the distance to the clearance.
+is `k` times the distance to the floor that `clip` uses: `other_clearance`, or the least clearance to that body when
+that is less. So a part inside the clearance can move back out, and cannot move further in.
 
 ### Not configured
 

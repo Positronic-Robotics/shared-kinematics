@@ -503,6 +503,23 @@ void speed_scale_holds_the_fastest_point_where_a_part_overlaps_a_shorter_paralle
   check(std::abs(s.s - 0.002 / 0.24) < 1e-6, "the step keeps scale " + str(s.s));
 }
 
+void speed_scale_lets_a_part_inside_the_clearance_of_another_body_move_back_out() {
+  const Guard guard = one_joint_guard(Vector3d(0.3, 0, 0), Vector3d(0.3, 0, 0), 0.01);
+  // Clearance 0.01 m to the near capsule; a step of +q leaves it and nears the far capsule.
+  const OtherBody other = {{Vector3d(0.34, 0.04, 0), Vector3d(0.34, 0.04, 0), 0.0},
+                           {Vector3d(0.3, -0.02, 0), Vector3d(0.3, -0.02, 0), 0.0}};
+  const VectorXd q = VectorXd::Zero(1);
+  const ClipResult r = guard.clip(q, VectorXd::Constant(1, 0.5), {other});
+  check(r.fraction == 1.0 && r.others_bound.empty(), "clip stops the move out at " + str(r.fraction));
+  const double dt = 0.001;
+  // The far capsule is 0.0366 m above the floor of 0.01 m and the part nears it at 0.3 / sqrt(2) m/s.
+  const double expected = 2.0 * (0.04 * std::sqrt(2.0) - 0.01 - 0.01) / (0.3 / std::sqrt(2.0));
+  const auto out = guard.speed_scale(q, VectorXd::Constant(1, dt), dt, {other});
+  check(std::abs(out.s - expected) < 1e-6, "the move out keeps scale " + str(out.s));
+  const auto in = guard.speed_scale(q, VectorXd::Constant(1, -dt), dt, {other});
+  check(in.s == 0.0 && in.slowest == "other:0", "the move deeper in keeps scale " + str(in.s));
+}
+
 }  // namespace
 
 int main() {
@@ -536,6 +553,8 @@ int main() {
        speed_scale_holds_the_fastest_end_of_a_part_parallel_to_another_body},
       {"speed_scale_lets_a_part_leave_another_body_whose_axis_it_crosses",
        speed_scale_lets_a_part_leave_another_body_whose_axis_it_crosses},
+      {"speed_scale_lets_a_part_inside_the_clearance_of_another_body_move_back_out",
+       speed_scale_lets_a_part_inside_the_clearance_of_another_body_move_back_out},
       {"speed_scale_holds_the_fastest_point_where_a_part_overlaps_a_shorter_parallel_body",
        speed_scale_holds_the_fastest_point_where_a_part_overlaps_a_shorter_parallel_body},
       {"speed_scale_slows_a_part_that_approaches_another_body",

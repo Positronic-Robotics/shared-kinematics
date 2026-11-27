@@ -194,7 +194,8 @@ class Guard {
 
   // One factor in [0, 1] on the joint step dq_step of a tick of dt seconds. Near a floor, each part moves toward
   // it at most approach_gain times its distance to the floor. A pad that may pass a side meets the side at most at
-  // touch_speed, and slows linearly to 0 at its floor.
+  // touch_speed, and slows linearly to 0 at its floor. The floor of an other-body check is the floor that clip
+  // uses: other_clearance, or the least clearance of the part to that body when that is less.
   ScaleResult speed_scale(const Eigen::VectorXd& q, const Eigen::VectorXd& dq_step, double dt,
                           const std::vector<OtherBody>& others = {}) const {
     model_.chain.check_joints(q);
@@ -226,6 +227,7 @@ class Guard {
         }
       }
     }
+    const int first_other = static_cast<int>(model_.self.pairs.size() + planes_.size() * plane_bodies_.size());
     for (std::size_t k = 0; k < ctx.others.size(); ++k) {
       const std::string name = "other:" + std::to_string(k);
       for (std::size_t i = 0; i < model_.bodies.size(); ++i) {
@@ -234,9 +236,14 @@ class Guard {
         const Eigen::Vector3d center = 0.5 * (a + b);
         const double bound = 0.5 * (b - a).norm() + body.capsule.radius;
         const double fastest = body_reach_[i].dot(dq_step.cwiseAbs()) / dt;
+        std::optional<double> floor;
         for (const BaseCapsule& c : ctx.others[k]) {
           const double least = (center - c.center).norm() - bound - c.bound - params_.other_clearance;
           if (least > 0 && params_.approach_gain * least >= result.s * fastest) continue;
+          if (!floor) {
+            const int check = first_other + static_cast<int>(k * model_.bodies.size() + i);
+            floor = std::min(params_.other_clearance, evaluate(ctx, check, false).value);
+          }
           // On parallel axes the closest points form an interval, so its possible ends are held too: the ends
           // of the part and the points of the part nearest to the ends of the other capsule.
           const Eigen::Vector3d nearest = closest_points_of_segments(a, b, c.a, c.b).first;
@@ -245,7 +252,7 @@ class Guard {
           for (const Eigen::Vector3d& p : {nearest, a, b, nearest_to_ca, nearest_to_cb}) {
             const Eigen::Vector3d o = closest_points_of_segments(p, p, c.a, c.b).second;
             const double distance = (p - o).norm();
-            const double to_floor = distance - body.capsule.radius - c.radius - params_.other_clearance;
+            const double to_floor = distance - body.capsule.radius - c.radius - *floor;
             if (distance < 1e-12) continue;  // the axes meet here: no move brings this point nearer
             const Eigen::Vector3d away = (p - o) / distance;
             const double approach = -away.dot(velocity(body.capsule.link, p));
