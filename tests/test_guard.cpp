@@ -468,6 +468,15 @@ void speed_scale_holds_the_fastest_end_of_a_part_parallel_to_another_body() {
   check(std::abs(s.s - 0.02) < 1e-6, "the step keeps scale " + str(s.s));
 }
 
+void speed_scale_holds_the_fastest_point_where_a_part_overlaps_a_shorter_parallel_body() {
+  const Guard guard = one_joint_guard(Vector3d(0, 0, 0), Vector3d(0.3, 0, 0), 0.01);
+  const OtherBody other = {{Vector3d(0.06, 0.071, 0), Vector3d(0.24, 0.071, 0), 0.01}};
+  const double dt = 0.001;
+  // The point at x = 0.24 m moves toward the other body at 0.24 m/s; 1 mm to its floor allows 0.002 m/s.
+  const auto s = guard.speed_scale(VectorXd::Zero(1), VectorXd::Constant(1, dt), dt, {other});
+  check(std::abs(s.s - 0.002 / 0.24) < 1e-6, "the step keeps scale " + str(s.s));
+}
+
 }  // namespace
 
 int main() {
@@ -497,6 +506,8 @@ int main() {
        a_move_away_from_the_nearest_capsule_of_another_body_goes_through},
       {"speed_scale_holds_the_fastest_end_of_a_part_parallel_to_another_body",
        speed_scale_holds_the_fastest_end_of_a_part_parallel_to_another_body},
+      {"speed_scale_holds_the_fastest_point_where_a_part_overlaps_a_shorter_parallel_body",
+       speed_scale_holds_the_fastest_point_where_a_part_overlaps_a_shorter_parallel_body},
       {"speed_scale_slows_a_part_that_approaches_another_body",
        speed_scale_slows_a_part_that_approaches_another_body},
   };

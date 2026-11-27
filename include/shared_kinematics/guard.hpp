@@ -236,9 +236,12 @@ class Guard {
         for (const BaseCapsule& c : ctx.others[k]) {
           const double least = (center - c.center).norm() - bound - c.bound - params_.other_clearance;
           if (least > 0 && params_.approach_gain * least >= result.s * fastest) continue;
-          // On parallel axes the closest point is not unique, so both ends are held too.
+          // On parallel axes the closest points form an interval, so its possible ends are held too: the ends
+          // of the part and the points of the part nearest to the ends of the other capsule.
           const Eigen::Vector3d nearest = closest_points_of_segments(a, b, c.a, c.b).first;
-          for (const Eigen::Vector3d& p : {nearest, a, b}) {
+          const Eigen::Vector3d nearest_to_ca = closest_points_of_segments(a, b, c.a, c.a).first;
+          const Eigen::Vector3d nearest_to_cb = closest_points_of_segments(a, b, c.b, c.b).first;
+          for (const Eigen::Vector3d& p : {nearest, a, b, nearest_to_ca, nearest_to_cb}) {
             const Eigen::Vector3d o = closest_points_of_segments(p, p, c.a, c.b).second;
             const double distance = (p - o).norm();
             const double to_floor = distance - body.capsule.radius - c.radius - params_.other_clearance;
