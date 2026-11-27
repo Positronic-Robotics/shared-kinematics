@@ -245,10 +245,7 @@ class Guard {
             const Eigen::Vector3d o = closest_points_of_segments(p, p, c.a, c.b).second;
             const double distance = (p - o).norm();
             const double to_floor = distance - body.capsule.radius - c.radius - params_.other_clearance;
-            if (distance < 1e-12) {
-              limit(fastest, 0.0, name);
-              continue;
-            }
+            if (distance < 1e-12) continue;  // the axes meet here: no move brings this point nearer
             const Eigen::Vector3d away = (p - o) / distance;
             const double approach = -away.dot(velocity(body.capsule.link, p));
             limit(approach, params_.approach_gain * std::max(0.0, to_floor), name);
@@ -423,8 +420,9 @@ class Guard {
       for (int i : pair.a)
         for (int j : pair.b) {
           const Capsule &ca = model_.self.capsules[i], &cb = model_.self.capsules[j];
-          const auto [pa, pb] = closest_points_of_segments(ctx.self_seg[i].first, ctx.self_seg[i].second,
-                                                           ctx.self_seg[j].first, ctx.self_seg[j].second);
+          const auto [pa, pb] =
+              closest_points_of_segments(ctx.self_seg[i].first, ctx.self_seg[i].second, ctx.self_seg[j].first,
+                                         ctx.self_seg[j].second, ParallelTest::kFranka32);
           const double distance = (pa - pb).norm();
           const double clearance = distance - ca.radius - cb.radius;
           if (!(clearance < v.value)) continue;
