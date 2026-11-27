@@ -38,6 +38,7 @@ target_include_directories(shared_kinematics INTERFACE
   $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
   $<INSTALL_INTERFACE:include>)
 target_link_libraries(shared_kinematics INTERFACE Eigen3::Eigen)
+target_compile_features(shared_kinematics INTERFACE cxx_std_17)
 
 if (SHARED_KINEMATICS_PYTHON)
   set(PYBIND11_FINDPYTHON NEW)
