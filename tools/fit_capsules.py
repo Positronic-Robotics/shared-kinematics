@@ -25,7 +25,6 @@ SAMPLES = 4000  # surface points per mesh, beside its vertices
 SEED = 0
 GROW = 0.0005  # m of radius over the fit, so that rounding cannot uncover a point
 TWO_CAPSULES_IF_BELOW = 0.75  # the part of one capsule's volume that two must stay under
-GRIP_STEPS = 11
 
 
 @dataclass
@@ -135,6 +134,7 @@ def moved(mesh: trimesh.Trimesh, pose: np.ndarray) -> np.ndarray:
 # The Robotiq 2F-85 on the FR3 flange, as positronic's model grafts it: (link, parent, xyz, rpy, grip axis, mesh,
 # mesh offset). A joint with a grip axis turns by grip * 0.8 rad.
 GRIP_TRAVEL = 0.8
+GRIP_STEPS = 11
 HALF_PI = 1.5707963268
 
 
